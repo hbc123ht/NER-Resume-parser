@@ -1,0 +1,7 @@
+torch
+pandas
+tqdm
+transformers
+tensorflow
+sklearn
+sense2vec==1.0.3
