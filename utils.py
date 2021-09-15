@@ -1,5 +1,99 @@
 import torch
+import fitz
 
+
+def extract_info(tokenizers, tags):
+    word_list = []
+    new_tags = []
+
+    # convert token list to word list
+    for token, tag in zip(tokenizers, tags):
+        if tag[0] == 'X':
+            word_list[-1] = word_list[-1] + token[2:]
+        else:
+            word_list.append(token)
+            new_tags.append(tag)
+    
+    info = []
+    value = None
+
+    # extract info
+    for word, tag in zip(word_list, new_tags):
+        if tag[0] == 'B':
+            value = word
+            key = tag.split('-')[1]
+
+        elif tag[0] == 'I':
+            value = value + ' ' + word
+
+        elif tag[0] == 'L':
+            value = value + ' ' + word
+            info.append({
+                'content' : value,
+                'tag' : key,
+            })
+
+        elif tag[0] == 'U':
+            value = word
+            key = tag.split('-')[1]
+            info.append({
+                'content' : value,
+                'tag' : key,
+            })
+
+    return info
+
+def extract_info_cons(tokenizers, tags):
+    word_list = []
+    new_tags = []
+    
+    # convert token list to word list
+    for token, tag in zip(tokenizers, tags):
+        if tag[0] == 'X':
+            word_list[-1] = word_list[-1] + token[2:]
+        else:
+            word_list.append(token)
+            
+            if tag == 'O':
+                new_tags.append(tag)
+            else:
+                new_tags.append(tag.split('-')[1])
+    
+    info = []
+    value = ''
+    key = None
+
+    # extract info
+    for id in range(len(word_list)):
+        if new_tags[id] == 'O':
+            value = ''
+            continue
+
+        if (id == len(word_list) - 1 or new_tags[id] != new_tags[id + 1]):
+            value = value + ' ' + word_list[id]
+            key = new_tags[id]
+            info.append({
+                'content' : value,
+                'tag' : key,
+            })
+            value = ''
+
+        else:
+            value = value + ' ' + word_list[id]
+         
+    return info
+
+def pdf2text(file_path):
+    """
+    params file_path: path to pdf file
+    return text: text extracted from all pages of the pdf
+    """
+    with fitz.open(file_path) as doc:
+        text = ""
+        for page in doc:
+            text += page.getText()
+
+    return text
 
 def evaluate(model, idx2tag, device, valid_dataloader = None):
     model.eval()
