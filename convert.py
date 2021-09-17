@@ -7,7 +7,7 @@ import re
 def is_label(string, categories):
 
     for category in categories:
-        if category in string:
+        if category in string and len(string) < 15:
             return category
     
     return None
@@ -19,10 +19,10 @@ if __name__ == '__main__':
     raw_contents = data['text']
 
     # initiate categories
-    categories = ["NAME", "BIRTH", "GENDER", "PHONE", "ADDRESS", "EMAIL"]
+    categories = ["NAME", "BIRTH", "GENDER", "PHONE", "ADDRESS", "EMAIL", "UNI", "DESIG", "COMPANY", "DEGREE"]
 
     cleaned_data = pd.DataFrame()
-
+    
     for raw_content in raw_contents:
         raw_content = raw_content.replace(".", "") 
         raw_content = raw_content.replace("|", "") 
