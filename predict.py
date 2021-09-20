@@ -30,8 +30,9 @@ if __name__ == '__main__':
     model = BertForTokenClassification.from_pretrained(args.LOAD_CHECKPOINT_DIR, num_labels = 25)
     nlp = pipeline("ner", model=model, tokenizer=tokenizer)
 
-    with open('idx2tag.json') as json_file:
-        idx2tag = json.load(json_file)
+    with open(os.path.join(args.LOAD_CHECKPOINT_DIR, 'tag2idx.json')) as json_file:
+        tag2idx = json.load(json_file)
+        idx2tag = {'LABEL_{}'.format(tag2idx[key]) : key for key in tag2idx.keys()}
 
     # read data
     data = pd.read_json('Vietnamese Entity Recognition in Resumes.json', lines=True)
@@ -46,7 +47,5 @@ if __name__ == '__main__':
         tokenizers.append(word['word'])
         tags.append(idx2tag[word['entity']])
 
-    print(tokenizers)
-    print(tags)
     result = extract_info_cons(tokenizers, tags) 
     print(result)
