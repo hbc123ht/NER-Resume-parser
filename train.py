@@ -98,7 +98,7 @@ if __name__ == '__main__':
     valid_dataloader = DataLoader(valid_data, sampler=valid_sampler, batch_size=args.BATCH_NUM)
     
     # initiate model and set finetune method
-    model = BertForTokenClassification.from_pretrained("vinai/phobert-base", num_labels = len(tag2idx))
+    model = BertForTokenClassification.from_pretrained(args.PRETRAINED_MODEL, num_labels = len(tag2idx))
 
     model.to(device)
     model.train()
