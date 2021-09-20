@@ -43,7 +43,7 @@ if __name__ == '__main__':
     data['entities'] = clean_entities(data['content'], data['entities'])
     texts, labels = get_train_data(data['content'], data['entities'])
 
-    # initiate model with BERT
+    # initiate tokenizier
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     
     tokenizer = PhobertTokenizer.from_pretrained("vinai/phobert-base", do_lower_case =False)
@@ -51,13 +51,22 @@ if __name__ == '__main__':
     # tokenize data
     tokenized_texts, word_piece_labels = tokenize_data(texts, labels, tokenizer = tokenizer)
 
-    #create tags list
-    tags_vals = list(set(i for j in word_piece_labels for i in j))
-    tag2idx = {tag : idx for idx, tag in enumerate(tags_vals)}
+    # initial model
+    model = BertForTokenClassification.from_pretrained(args.PRETRAINED_MODEL, num_labels = len(tag2idx))
+
+    model.to(device)
+    model.train()
+
+    #create or load tags list
+    if os.path.exists(args.PRETRAINED_MODEL):
+        with open(os.path.join(args.PRETRAINED_MODEL, 'idx2tag.json')) as json_file:
+            idx2tag = json.load(json_file)
+
+    else:
+        tags_vals = list(set(i for j in word_piece_labels for i in j))
+        tag2idx = {tag : idx for idx, tag in enumerate(tags_vals)}
+
     idx2tag = {'LABEL_{}'.format(tag2idx[key]) : key for key in tag2idx.keys()}
-    
-    with open('idx2tag.json', 'w') as outfile:
-        json.dump(idx2tag, outfile)
 
     # Make text token into id
     input_ids = pad_sequences([tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts],
@@ -97,11 +106,8 @@ if __name__ == '__main__':
     valid_sampler = SequentialSampler(valid_data)
     valid_dataloader = DataLoader(valid_data, sampler=valid_sampler, batch_size=args.BATCH_NUM)
     
-    # initiate model and set finetune method
-    model = BertForTokenClassification.from_pretrained(args.PRETRAINED_MODEL, num_labels = len(tag2idx))
-
-    model.to(device)
-    model.train()
+    # Set finetune method
+ 
 
     if args.FULL_FINETUNING:
         # Fine tune model all layer parameters
@@ -177,6 +183,10 @@ if __name__ == '__main__':
             torch.save(model_to_save.state_dict(), output_model_file)
             model_to_save.config.to_json_file(output_config_file)
             tokenizer.save_vocabulary(address)
+
+            # save idx2tag
+            with open(os.path.join(address, 'tag2idx.json'), 'w') as outfile:
+                json.dump(tag2idx, outfile)
 
 
         
