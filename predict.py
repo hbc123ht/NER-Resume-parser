@@ -1,3 +1,4 @@
+import os
 import json
 import argparse
 from transformers import PhobertTokenizer, BertForTokenClassification
@@ -26,13 +27,15 @@ if __name__ == '__main__':
     # parser.add_argument("--load_pdf_dir", dest="LOAD_PDF_DIR", type=str, required=True, help="Path to pdf")
     args = parser.parse_args()
 
-    tokenizer = PhobertTokenizer.from_pretrained("vinai/phobert-base", do_lower_case =False)
-    model = BertForTokenClassification.from_pretrained(args.LOAD_CHECKPOINT_DIR, num_labels = 25)
-    nlp = pipeline("ner", model=model, tokenizer=tokenizer)
-
+    # load tag2idx
     with open(os.path.join(args.LOAD_CHECKPOINT_DIR, 'tag2idx.json')) as json_file:
         tag2idx = json.load(json_file)
         idx2tag = {'LABEL_{}'.format(tag2idx[key]) : key for key in tag2idx.keys()}
+
+    # initate model
+    tokenizer = PhobertTokenizer.from_pretrained("vinai/phobert-base", do_lower_case =False)
+    model = BertForTokenClassification.from_pretrained(args.LOAD_CHECKPOINT_DIR, num_labels = len(tag2idx))
+    nlp = pipeline("ner", model=model, tokenizer=tokenizer)
 
     # read data
     data = pd.read_json('Vietnamese Entity Recognition in Resumes.json', lines=True)
