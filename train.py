@@ -51,22 +51,24 @@ if __name__ == '__main__':
     # tokenize data
     tokenized_texts, word_piece_labels = tokenize_data(texts, labels, tokenizer = tokenizer)
 
-    # initial model
-    model = BertForTokenClassification.from_pretrained(args.PRETRAINED_MODEL, num_labels = len(tag2idx))
-
-    model.to(device)
-    model.train()
-
     #create or load tags list
+
+    tag2idx = None
     if os.path.exists(args.PRETRAINED_MODEL):
-        with open(os.path.join(args.PRETRAINED_MODEL, 'idx2tag.json')) as json_file:
-            idx2tag = json.load(json_file)
+        with open(os.path.join(args.PRETRAINED_MODEL, 'tag2idx.json')) as json_file:
+            tag2idx = json.load(json_file)
 
     else:
         tags_vals = list(set(i for j in word_piece_labels for i in j))
         tag2idx = {tag : idx for idx, tag in enumerate(tags_vals)}
 
     idx2tag = {'LABEL_{}'.format(tag2idx[key]) : key for key in tag2idx.keys()}
+
+    # initial model
+    model = BertForTokenClassification.from_pretrained(args.PRETRAINED_MODEL, num_labels = len(tag2idx))
+
+    model.to(device)
+    model.train()
 
     # Make text token into id
     input_ids = pad_sequences([tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts],
