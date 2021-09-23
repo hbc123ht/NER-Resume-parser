@@ -3,6 +3,29 @@ import spacy
 from spacy.gold import biluo_tags_from_offsets
 import re
 
+def split_sentences(sentences, length = None, overlap_size = None):
+    """
+    params sentence: list of sentences which is needed to be splitted
+    params length: length of each splitted sequence
+    params overlap_size: length of overlapped sequence between each 2 consecutive sequences
+    return 
+    """
+    splitted_sequences = []
+
+    for sentence in sentences:
+        print(sentence)
+        beginning = 0
+        while True:
+            if beginning + length <= len(sentence):
+                splitted_sequences.append(sentence[beginning: beginning + length])
+            else:
+                splitted_sequences.append(sentence[beginning:])
+                break
+            
+            beginning = beginning + length - overlap_size
+        
+    return splitted_sequences
+
 def get_entities(df):
     """
     params df: annotation in "Entity recognition in resumes" dataset from kaggle 

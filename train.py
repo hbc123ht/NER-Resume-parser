@@ -16,7 +16,7 @@ from torch.utils.data import TensorDataset, DataLoader, RandomSampler, Sequentia
 from keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 
-from preprocess import get_entities, clean_entities, tokenize_data, get_train_data
+from preprocess import get_entities, clean_entities, tokenize_data, get_train_data, split_sentences
 
 
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
@@ -78,7 +78,10 @@ if __name__ == '__main__':
     tags = pad_sequences([[tag2idx.get(l) for l in lab] for lab in word_piece_labels],
                       maxlen=args.MAX_LEN, value=tag2idx["O"], padding="post",
                      dtype="long", truncating="post")
-                     
+    
+    input_ids, tags = split_sentences(input_ids, length=args.MAX_LEN, overlap_size=50), \
+                    split_sentences(tags, length=args.MAX_LEN, overlap_size=50)
+
     # For fine tune of predict, with token mask is 1,pad token is 0
     attention_masks = [[int(i>0) for i in ii] for ii in input_ids]
     
