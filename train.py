@@ -51,6 +51,9 @@ if __name__ == '__main__':
     # tokenize data
     tokenized_texts, word_piece_labels = tokenize_data(texts, labels, tokenizer = tokenizer)
 
+    tokenized_texts, word_piece_labels = split_sentences(tokenized_texts, length=args.MAX_LEN, overlap_size=50), \
+                    split_sentences(word_piece_labels, length=args.MAX_LEN, overlap_size=50)
+
     #create or load tags list
 
     tag2idx = None
@@ -78,9 +81,6 @@ if __name__ == '__main__':
     tags = pad_sequences([[tag2idx.get(l) for l in lab] for lab in word_piece_labels],
                       maxlen=args.MAX_LEN, value=tag2idx["O"], padding="post",
                      dtype="long", truncating="post")
-    
-    input_ids, tags = split_sentences(input_ids, length=args.MAX_LEN, overlap_size=50), \
-                    split_sentences(tags, length=args.MAX_LEN, overlap_size=50)
 
     # For fine tune of predict, with token mask is 1,pad token is 0
     attention_masks = [[int(i>0) for i in ii] for ii in input_ids]

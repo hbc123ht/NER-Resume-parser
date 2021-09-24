@@ -13,7 +13,6 @@ def split_sentences(sentences, length = None, overlap_size = None):
     splitted_sequences = []
 
     for sentence in sentences:
-        print(sentence)
         beginning = 0
         while True:
             if beginning + length <= len(sentence):
