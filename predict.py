@@ -2,23 +2,10 @@ import os
 import json
 import argparse
 from transformers import PhobertTokenizer, BertForTokenClassification
-from transformers import pipeline
 import pandas as pd
-import fitz
+from model import BERTClass
 
-from utils import pdf2text, extract_info, extract_info_cons
-
-def pdf2text(file_path):
-    """
-    params file_path: path to pdf file
-    return text: text extracted from all pages of the pdf
-    """
-    with fitz.open(file_path) as doc:
-        text = ""
-        for page in doc:
-            text += page.getText()
-
-    return text
+from utils import pdf2text, make_prediction
 
 if __name__ == '__main__':
     #initiate argparse
@@ -30,25 +17,16 @@ if __name__ == '__main__':
     # load tag2idx
     with open(os.path.join(args.LOAD_CHECKPOINT_DIR, 'tag2idx.json')) as json_file:
         tag2idx = json.load(json_file)
-        idx2tag = {'LABEL_{}'.format(tag2idx[key]) : key for key in tag2idx.keys()}
+        idx2tag = {tag2idx[key] : key for key in tag2idx.keys()}
 
     # initate model
-    tokenizer = PhobertTokenizer.from_pretrained("vinai/phobert-base", do_lower_case =False)
-    model = BertForTokenClassification.from_pretrained(args.LOAD_CHECKPOINT_DIR, num_labels = len(tag2idx))
-    nlp = pipeline("ner", model=model, tokenizer=tokenizer)
-
+    tokenizer = PhobertTokenizer.from_pretrained(args.LOAD_CHECKPOINT_DIR, do_lower_case =False)
+    model = BERTClass(args.LOAD_CHECKPOINT_DIR, num_labels = len(tag2idx))
+    
     # read data
     data = pd.read_json('Vietnamese Entity Recognition in Resumes.json', lines=True)
 
-    example = data['content'][4]
+    example = data['content'][200]
 
-    ner_results = nlp(example)
-
-    tokenizers = []
-    tags = []
-    for word in ner_results:
-        tokenizers.append(word['word'])
-        tags.append(idx2tag[word['entity']])
-
-    result = extract_info_cons(tokenizers, tags) 
-    print(result)
+    print(example)
+    print(make_prediction(example, idx2tag, model = model, tokenizer = tokenizer))

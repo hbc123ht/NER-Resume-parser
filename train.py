@@ -15,6 +15,7 @@ from transformers import BertForTokenClassification, \
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 from keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
+from model import BERTClass
 
 from preprocess import get_entities, clean_entities, tokenize_data, get_train_data, split_sentences
 
@@ -26,7 +27,6 @@ if __name__ == '__main__':
     #initiate argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--max_len", dest="MAX_LEN", type=int, default=512, help="model's 'max_position_embeddings'")
-    parser.add_argument("--full_finetuning", dest="FULL_FINETUNING", type=bool, default=False, help="Finetune all parameters or just only classfier parameters")
     parser.add_argument("--data_dir", dest="DATA_DIR", type=str, required=True, help="Path to DATA")
     parser.add_argument("--save_checkpoint_dir", dest="SAVE_CHECKPOINT_DIR", type=str, required=True, help="Path to save checkpoint")
     parser.add_argument("--save_checkpoint_fre", dest="SAVE_CHECKPOINT_FRE", type=int, required=True, help="num epochs per checkpoint saving")
@@ -111,26 +111,8 @@ if __name__ == '__main__':
     valid_sampler = SequentialSampler(valid_data)
     valid_dataloader = DataLoader(valid_data, sampler=valid_sampler, batch_size=args.BATCH_NUM)
     
-    # Set finetune method
- 
-
-    if args.FULL_FINETUNING:
-        # Fine tune model all layer parameters
-        param_optimizer = list(model.named_parameters())
-        no_decay = ['bias', 'gamma', 'beta']
-        optimizer_grouped_parameters = [
-            {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
-            'weight_decay_rate': 0.01},
-            {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)],
-            'weight_decay_rate': 0.0}
-        ]
-    else:
-        # Only fine tune classifier parameters
-        param_optimizer = list(model.classifier.named_parameters()) 
-        optimizer_grouped_parameters = [{"params": [p for n, p in param_optimizer]}]
-
     # optimization method
-    optimizer = AdamW(optimizer_grouped_parameters, lr=3e-5)
+    optimizer = AdamW(params = model.parameters(), lr=3e-5)
 
     # Set epoch and grad max num
     epochs = 2
@@ -153,8 +135,7 @@ if __name__ == '__main__':
             b_input_ids, b_input_mask, b_labels = batch
             
             # forward pass
-            outputs = model(b_input_ids, token_type_ids=None,
-            attention_mask=b_input_mask, labels=b_labels)
+            outputs = model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
             loss, scores = outputs[:2]
             
             # backward pass
@@ -192,8 +173,6 @@ if __name__ == '__main__':
             # save idx2tag
             with open(os.path.join(address, 'tag2idx.json'), 'w') as outfile:
                 json.dump(tag2idx, outfile)
-
-
         
         # print train loss per epoch    
         logging.info("Train loss: {}".format(tr_loss/nb_tr_steps))
