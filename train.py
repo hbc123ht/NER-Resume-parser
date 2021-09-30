@@ -105,10 +105,15 @@ if __name__ == '__main__':
     # val_segs = torch.tensor(val_segs)
 
     # init dataset
+    
     training_set = CustomDataset(tokenized_texts, word_piece_labels, tokenizer = tokenizer, max_len= args.MAX_LEN, tag2idx = tag2idx)
 
     # Only set token embedding, attention embedding, no segment embedding
-    train_dataloader = DataLoader(training_set, batch_size=args.BATCH_NUM)
+    train_params = {'batch_size': args.BATCH_NUM,
+                'shuffle': True,
+                'num_workers': 0
+                }
+    train_dataloader = DataLoader(training_set, **train_params)
 
     # optimization method
     optimizer = AdamW(params = model.parameters(), lr=3e-5)
@@ -119,7 +124,7 @@ if __name__ == '__main__':
 
     # training model
     logging.info("***** Running training *****")
-    logging.info("  Num examples = %d"%(len(tr_inputs)))
+    logging.info("  Num examples = %d"%(len(training_set)))
     logging.info("  Batch size = %d"%(args.BATCH_NUM))
 
     # create checkpoint dir
@@ -130,8 +135,9 @@ if __name__ == '__main__':
         nb_tr_examples, nb_tr_steps = 0, 0
         for step, batch in enumerate(train_dataloader):
             # add batch to gpu
-            batch = tuple(t.to(device) for t in batch)
-            b_input_ids, b_input_mask, b_labels = batch
+            b_input_ids = batch['ids'].to(device)
+            b_input_mask = batch['mask'].to(device)
+            b_labels = batch['tag'].to(device)
             
             # forward pass
             outputs = model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
