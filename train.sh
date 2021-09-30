@@ -6,4 +6,4 @@ python3 train.py --max_len 258 \
                 --lr 3e-5 \
                 --batch_num 10 \
                 --num_epoch 25 \
-                --pretrained_model "checkpoint_6"
+                --pretrained_model "vinai/phobert-base"
