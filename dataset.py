@@ -18,7 +18,7 @@ class CustomDataset(Dataset):
         self.tag2idx = tag2idx
 
     def __getitem__(self, index):
-        token = str(self.tokens[index])
+        token = self.tokens[index]
         ids = self.tokenizer.convert_tokens_to_ids(token)
         ids.extend([0] * (self.max_len - len(ids)))
         mask = [int(i>0) for i in ids]
