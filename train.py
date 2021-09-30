@@ -15,6 +15,7 @@ from transformers import BertForTokenClassification, \
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 from keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
+from dataset import CustomDataset
 from model import BERTClass
 
 from preprocess import get_entities, clean_entities, tokenize_data, get_train_data, split_sentences
@@ -74,43 +75,41 @@ if __name__ == '__main__':
     model.train()
 
     # Make text token into id
-    input_ids = pad_sequences([tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts],
-                           maxlen=args.MAX_LEN, dtype="long", truncating="post", padding="post")
+    # input_ids = pad_sequences([tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts],
+    #                        maxlen=args.MAX_LEN, dtype="long", truncating="post", padding="post")
     
-    # Make label into id, pad with "O" meaning others
-    tags = pad_sequences([[tag2idx.get(l) for l in lab] for lab in word_piece_labels],
-                      maxlen=args.MAX_LEN, value=tag2idx["O"], padding="post",
-                     dtype="long", truncating="post")
+    # # Make label into id, pad with "O" meaning others
+    # tags = pad_sequences([[tag2idx.get(l) for l in lab] for lab in word_piece_labels],
+    #                   maxlen=args.MAX_LEN, value=tag2idx["O"], padding="post",
+    #                  dtype="long", truncating="post")
+    
 
     # For fine tune of predict, with token mask is 1,pad token is 0
-    attention_masks = [[int(i>0) for i in ii] for ii in input_ids]
+    # attention_masks = [[int(i>0) for i in ii] for ii in input_ids]
     
-    # Since only one sentence, all the segment set to 0
-    segment_ids = [[0] * len(input_id) for input_id in input_ids]
+    # # Since only one sentence, all the segment set to 0
+    # segment_ids = [[0] * len(input_id) for input_id in input_ids]
     
-    # Split all data
-    tr_inputs, val_inputs, tr_tags, val_tags,tr_masks, val_masks,tr_segs, val_segs = train_test_split(input_ids, tags,attention_masks,segment_ids, 
-                                                            random_state=4, test_size=0.15)
+    # # Split all data
+    # tr_inputs, val_inputs, tr_tags, val_tags,tr_masks, val_masks,tr_segs, val_segs = train_test_split(input_ids, tags,attention_masks,segment_ids, 
+    #                                                         random_state=4, test_size=0.15)
 
     # to torch tensor
-    tr_inputs = torch.tensor(tr_inputs)
-    val_inputs = torch.tensor(val_inputs)
-    tr_tags = torch.tensor(tr_tags)
-    val_tags = torch.tensor(val_tags)
-    tr_masks = torch.tensor(tr_masks)
-    val_masks = torch.tensor(val_masks)
-    tr_segs = torch.tensor(tr_segs)
-    val_segs = torch.tensor(val_segs)
+    # tr_inputs = torch.tensor(tr_inputs)
+    # val_inputs = torch.tensor(val_inputs)
+    # tr_tags = torch.tensor(tr_tags)
+    # val_tags = torch.tensor(val_tags)
+    # tr_masks = torch.tensor(tr_masks)
+    # val_masks = torch.tensor(val_masks)
+    # tr_segs = torch.tensor(tr_segs)
+    # val_segs = torch.tensor(val_segs)
+
+    # init dataset
+    training_set = CustomDataset(tokenized_texts, word_piece_labels, tokenizer = tokenizer, max_len= args.MAX_LEN, tag2idx = tag2idx)
 
     # Only set token embedding, attention embedding, no segment embedding
-    train_data = TensorDataset(tr_inputs, tr_masks, tr_tags)
-    train_sampler = RandomSampler(train_data)
-    train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.BATCH_NUM)
+    train_dataloader = DataLoader(training_set, batch_size=args.BATCH_NUM)
 
-    valid_data = TensorDataset(val_inputs, val_masks, val_tags)
-    valid_sampler = SequentialSampler(valid_data)
-    valid_dataloader = DataLoader(valid_data, sampler=valid_sampler, batch_size=args.BATCH_NUM)
-    
     # optimization method
     optimizer = AdamW(params = model.parameters(), lr=3e-5)
 
