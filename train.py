@@ -29,10 +29,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--max_len", dest="MAX_LEN", type=int, default=512, help="model's 'max_position_embeddings'")
     parser.add_argument("--data_dir", dest="DATA_DIR", type=str, required=True, help="Path to DATA")
+    parser.add_argument("--overlap_size", dest="OS", type=int, default=50, help="length of overlapped sequence between 2 sub tokens")
     parser.add_argument("--save_checkpoint_dir", dest="SAVE_CHECKPOINT_DIR", type=str, required=True, help="Path to save checkpoint")
     parser.add_argument("--save_checkpoint_fre", dest="SAVE_CHECKPOINT_FRE", type=int, required=True, help="num epochs per checkpoint saving")
     parser.add_argument("--num_epoch", dest="NUM_EPOCH", type=int, required=True, help="batch size")
     parser.add_argument("--batch_num", dest="BATCH_NUM", type=int, required=True, default=32, help="batch size")
+    parser.add_argument("--lr", dest="LR", type=float, default=3e-5, help="start learning rate")
     parser.add_argument("--pretrained_model", dest="PRETRAINED_MODEL", type=str, required=True, help="Name of the pretrained model")
     args = parser.parse_args()
 
@@ -52,8 +54,8 @@ if __name__ == '__main__':
     # tokenize data
     tokenized_texts, word_piece_labels = tokenize_data(texts, labels, tokenizer = tokenizer)
 
-    tokenized_texts, word_piece_labels = split_sentences(tokenized_texts, length=args.MAX_LEN, overlap_size=50), \
-                    split_sentences(word_piece_labels, length=args.MAX_LEN, overlap_size=50)
+    tokenized_texts, word_piece_labels = split_sentences(tokenized_texts, length=args.MAX_LEN, overlap_size=args.OS), \
+                    split_sentences(word_piece_labels, length=args.MAX_LEN, overlap_size=args.OS)
 
     #create or load tags list
 
@@ -74,36 +76,6 @@ if __name__ == '__main__':
     model.to(device)
     model.train()
 
-    # Make text token into id
-    # input_ids = pad_sequences([tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts],
-    #                        maxlen=args.MAX_LEN, dtype="long", truncating="post", padding="post")
-    
-    # # Make label into id, pad with "O" meaning others
-    # tags = pad_sequences([[tag2idx.get(l) for l in lab] for lab in word_piece_labels],
-    #                   maxlen=args.MAX_LEN, value=tag2idx["O"], padding="post",
-    #                  dtype="long", truncating="post")
-    
-
-    # For fine tune of predict, with token mask is 1,pad token is 0
-    # attention_masks = [[int(i>0) for i in ii] for ii in input_ids]
-    
-    # # Since only one sentence, all the segment set to 0
-    # segment_ids = [[0] * len(input_id) for input_id in input_ids]
-    
-    # # Split all data
-    # tr_inputs, val_inputs, tr_tags, val_tags,tr_masks, val_masks,tr_segs, val_segs = train_test_split(input_ids, tags,attention_masks,segment_ids, 
-    #                                                         random_state=4, test_size=0.15)
-
-    # to torch tensor
-    # tr_inputs = torch.tensor(tr_inputs)
-    # val_inputs = torch.tensor(val_inputs)
-    # tr_tags = torch.tensor(tr_tags)
-    # val_tags = torch.tensor(val_tags)
-    # tr_masks = torch.tensor(tr_masks)
-    # val_masks = torch.tensor(val_masks)
-    # tr_segs = torch.tensor(tr_segs)
-    # val_segs = torch.tensor(val_segs)
-
     # init dataset
     
     training_set = CustomDataset(tokenized_texts, word_piece_labels, tokenizer = tokenizer, max_len= args.MAX_LEN, tag2idx = tag2idx)
@@ -116,7 +88,7 @@ if __name__ == '__main__':
     train_dataloader = DataLoader(training_set, **train_params)
 
     # optimization method
-    optimizer = AdamW(params = model.parameters(), lr=3e-5)
+    optimizer = AdamW(params = model.parameters(), lr=args.LR)
 
     # Set epoch and grad max num
     epochs = 2
@@ -130,7 +102,7 @@ if __name__ == '__main__':
     # create checkpoint dir
     os.makedirs(args.SAVE_CHECKPOINT_DIR, exist_ok = True)
 
-    for _ in trange(args.NUM_EPOCH,desc="Epoch"):
+    def train(epoch):
         tr_loss = 0
         nb_tr_examples, nb_tr_steps = 0, 0
         for step, batch in enumerate(train_dataloader):
@@ -158,9 +130,9 @@ if __name__ == '__main__':
             optimizer.step()
             optimizer.zero_grad()
         
-        if _ % args.SAVE_CHECKPOINT_FRE == 0 and _ > 0:
+        if epoch % args.SAVE_CHECKPOINT_FRE == 0 and epoch > 0:
             # create folder for model
-            address = os.path.join(args.SAVE_CHECKPOINT_DIR, "checkpoint_{}".format(_))
+            address = os.path.join(args.SAVE_CHECKPOINT_DIR, "checkpoint_{}".format(epoch))
             os.makedirs(address, exist_ok = True)
 
             # Save a trained model, configuration and tokenizer
@@ -182,6 +154,8 @@ if __name__ == '__main__':
         # print train loss per epoch    
         logging.info("Train loss: {}".format(tr_loss/nb_tr_steps))
 
-        # evaluate(model, idx2tag, device, valid_dataloader = valid_dataloader)
 
-        model.eval()
+
+    for epoch in trange(args.NUM_EPOCH,desc="Epoch"):
+        train(epoch)
+        
