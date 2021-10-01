@@ -1,5 +1,8 @@
 import torch
 import fitz
+import numpy as np
+
+from seqeval.metrics import f1_score
 
 def split_token(token, length = None, overlap_size = None):
     """
@@ -120,48 +123,45 @@ def pdf2text(file_path):
 
     return text
 
-def evaluate(model, idx2tag, device, valid_dataloader = None):
+def flat_accuracy(preds, labels):
+    flat_preds = np.argmax(preds, axis=2).flatten()
+    flat_labels = labels.flatten()
+    return np.sum(flat_preds == flat_labels)/len(flat_labels)
+
+def evaluate(model, device, testing_loader, idx2tag):
     model.eval()
-
-    y_true = []
-    y_pred = []
-    eval_loss, eval_accuracy = 0, 0
+    eval_loss = 0; eval_accuracy = 0
+    n_correct = 0; n_wrong = 0; total = 0
+    predictions , true_labels = [], []
     nb_eval_steps, nb_eval_examples = 0, 0
+    with torch.no_grad():
+        for _, data in enumerate(testing_loader, 0):
+            ids = data['ids'].to(device, dtype = torch.long)
+            mask = data['mask'].to(device, dtype = torch.long)
+            targets = data['tag'].to(device, dtype = torch.long)
 
-    for batch in valid_dataloader:
-        batch = tuple(t.to(device) for t in batch)
-        input_ids, input_mask, label_ids = batch
+            output = model(ids, attention_mask=mask, labels=targets)
 
-        with torch.no_grad():
-            logits = model(input_ids, token_type_ids=None, attention_mask=input_mask,)
+            loss, logits = output[:2]
+            logits = logits.detach().cpu().numpy()
+            label_ids = targets.to('cpu').numpy()
+            predictions.extend([list(p) for p in np.argmax(logits, axis=2)])
+            true_labels.append(label_ids)
+            accuracy = flat_accuracy(logits, label_ids)
+            eval_loss += loss.mean().item()
+            eval_accuracy += accuracy
+            nb_eval_examples += ids.size(0)
+            nb_eval_steps += 1
 
-        logits = logits.detach().cpu().numpy()
-        logits = [list(p) for p in np.argmax(logits, axis=2)]
-        
-        label_ids = label_ids.to('cpu').numpy()
-        input_mask = input_mask.to('cpu').numpy()
-        
-        for i,mask in enumerate(input_mask):
-            temp_1 = [] # Real one
-            temp_2 = [] # Predict one
-            
-            for j, m in enumerate(mask):
-                # Mark=0, meaning its a pad word, dont compare
-                if m:
-                    if idx2tag[label_ids[i][j]] != "X" and idx2tag[label_ids[i][j]] != "[CLS]" and idx2tag[label_ids[i][j]] != "[SEP]" : # Exclude the X label
-                        temp_1.append(idx2tag[label_ids[i][j]])
-                        temp_2.append(idx2tag[logits[i][j]])
-                else:
-                    break
-            
-                
-            y_true.append(temp_1)
-            y_pred.append(temp_2)
-        
-    print("f1 socre: %f"%(f1_score(y_true, y_pred)))
-    print("Accuracy score: %f"%(accuracy_score(y_true, y_pred)))
-
-    print(classification_report(y_true, y_pred,digits=4))
+        eval_loss = eval_loss/nb_eval_steps
+        eval_acc = eval_accuracy/nb_eval_steps
+        pred_tags = [[idx2tag['LABEL_{}'.format(p_i)] for p in predictions for p_i in p]]
+        valid_tags = [[idx2tag['LABEL_{}'.format(l_ii)] for l in true_labels for l_i in l for l_ii in l_i]]
+        import warnings
+        warnings.filterwarnings('ignore') 
+        eval_f1score = f1_score(pred_tags, valid_tags)
+    
+    return eval_loss, eval_acc, eval_f1score
 
 def make_prediction(
     input : str,

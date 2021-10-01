@@ -12,8 +12,7 @@ from seqeval.metrics import classification_report,accuracy_score,f1_score
 
 from transformers import BertForTokenClassification, \
                         PhobertTokenizer, AdamW
-from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
-from keras.preprocessing.sequence import pad_sequences
+from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from dataset import CustomDataset
 from model import BERTClass
@@ -36,6 +35,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_num", dest="BATCH_NUM", type=int, required=True, default=32, help="batch size")
     parser.add_argument("--lr", dest="LR", type=float, default=3e-5, help="start learning rate")
     parser.add_argument("--pretrained_model", dest="PRETRAINED_MODEL", type=str, required=True, help="Name of the pretrained model")
+    parser.add_argument("--load_checkpoint_dir", dest="CHECKPOINT_DIR", type=str, default = None, help="Dir of the checkpoint")
     args = parser.parse_args()
 
     # read data
@@ -57,11 +57,14 @@ if __name__ == '__main__':
     tokenized_texts, word_piece_labels = split_sentences(tokenized_texts, length=args.MAX_LEN, overlap_size=args.OS), \
                     split_sentences(word_piece_labels, length=args.MAX_LEN, overlap_size=args.OS)
 
+    train_tokenized_texts, test_tokenized_texts, \
+    train_word_piece_labels, test_word_piece_labels = train_test_split(tokenized_texts, word_piece_labels, test_size=0.2, random_state=42)
+
     #create or load tags list
 
     tag2idx = None
-    if os.path.exists(args.PRETRAINED_MODEL):
-        with open(os.path.join(args.PRETRAINED_MODEL, 'tag2idx.json')) as json_file:
+    if args.CHECKPOINT_DIR != None:
+        with open(os.path.join(args.CHECKPOINT_DIR, 'tag2idx.json')) as json_file:
             tag2idx = json.load(json_file)
 
     else:
@@ -71,14 +74,19 @@ if __name__ == '__main__':
     idx2tag = {'LABEL_{}'.format(tag2idx[key]) : key for key in tag2idx.keys()}
 
     # initial model
-    model = BertForTokenClassification.from_pretrained(args.PRETRAINED_MODEL, num_labels = len(tag2idx))
+    model = BERTClass(args.PRETRAINED_MODEL, num_labels = len(tag2idx))
+
+    #load checkpoint if available
+    if args.CHECKPOINT_DIR != None:
+        model.load_state_dict(torch.load(os.path.join(args.CHECKPOINT_DIR, 'weights.pt')))
 
     model.to(device)
     model.train()
 
     # init dataset
     
-    training_set = CustomDataset(tokenized_texts, word_piece_labels, tokenizer = tokenizer, max_len= args.MAX_LEN, tag2idx = tag2idx)
+    training_set = CustomDataset(train_tokenized_texts, train_word_piece_labels, tokenizer = tokenizer, max_len= args.MAX_LEN, tag2idx = tag2idx)
+    test_set = CustomDataset(test_tokenized_texts, test_word_piece_labels, tokenizer = tokenizer, max_len= args.MAX_LEN, tag2idx = tag2idx)
 
     # Only set token embedding, attention embedding, no segment embedding
     train_params = {'batch_size': args.BATCH_NUM,
@@ -86,6 +94,7 @@ if __name__ == '__main__':
                 'num_workers': 0
                 }
     train_dataloader = DataLoader(training_set, **train_params)
+    test_dataloader = DataLoader(test_set, **train_params)
 
     # optimization method
     optimizer = AdamW(params = model.parameters(), lr=args.LR)
@@ -134,26 +143,20 @@ if __name__ == '__main__':
             # create folder for model
             address = os.path.join(args.SAVE_CHECKPOINT_DIR, "checkpoint_{}".format(epoch))
             os.makedirs(address, exist_ok = True)
-
-            # Save a trained model, configuration and tokenizer
-            model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self  
-
-            # If we save using the predefined names, we can load using `from_pretrained`
-            output_model_file = os.path.join(address, "pytorch_model.bin")
-            output_config_file = os.path.join(address, "config.json")
-
-            # Save model into file
-            torch.save(model_to_save.state_dict(), output_model_file)
-            model_to_save.config.to_json_file(output_config_file)
-            tokenizer.save_vocabulary(address)
+            torch.save(model.state_dict(), os.path.join(address, 'weights.pt'))
 
             # save idx2tag
             with open(os.path.join(address, 'tag2idx.json'), 'w') as outfile:
                 json.dump(tag2idx, outfile)
-        
-        # print train loss per epoch    
-        logging.info("Train loss: {}".format(tr_loss/nb_tr_steps))
 
+        # evaluata
+        eval_loss, eval_acc, eval_f1score = evaluate(model , testing_loader=train_dataloader, device = device, idx2tag=idx2tag)
+
+        # print train val loss per epoch    
+        logging.info("Train loss: {}".format(tr_loss/nb_tr_steps))
+        logging.info("Eval loss: {}".format(eval_loss))
+        logging.info("Eval accuracy: {}".format(eval_acc))
+        logging.info("Eval f1 score: {}".format(eval_f1score))
 
 
     for epoch in trange(args.NUM_EPOCH,desc="Epoch"):
