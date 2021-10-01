@@ -63,19 +63,25 @@ def extract_info(tokenizers, tags):
 
     return info
 
-def extract_info_cons(tokenizers, tags):
+def extract_info_cons(tokens, tags):
     word_list = []
     new_tags = []
 
     # convert token list to word list
-    for token, tag in zip(tokenizers, tags):
-        if tag[0] == 'X':
+    for id in range(len(tokens)):
+        if id > 0 and tokens[id - 1][-2:] == '@@':
             if (len(word_list) == 0): 
                 continue
-            word_list[-1] = word_list[-1] + token.replace("@", "")
+            if tokens[id][-2:] == '@@':
+                word_list[-1] = word_list[-1] + tokens[id][:-2]
+            else:
+                word_list[-1] = word_list[-1] + tokens[id]
         else:
-            word_list.append(token.replace("@", ""))
-            new_tags.append(tag)
+            if tokens[id][-2:] == '@@':
+                word_list.append(tokens[id][:-2])
+            else:
+                word_list.append(tokens[id])
+            new_tags.append(tags[id])
 
     info = []
     value = ''
