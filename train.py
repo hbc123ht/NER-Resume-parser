@@ -150,7 +150,7 @@ if __name__ == '__main__':
                 json.dump(tag2idx, outfile)
 
         # evaluata
-        eval_loss, eval_acc, eval_f1score = evaluate(model , testing_loader=train_dataloader, device = device, idx2tag=idx2tag)
+        eval_loss, eval_acc, eval_f1score = evaluate(model , testing_loader=test_dataloader, device = device, idx2tag=idx2tag)
 
         # print train val loss per epoch    
         logging.info("Train loss: {}".format(tr_loss/nb_tr_steps))
