@@ -95,7 +95,12 @@ def extract_info_cons(tokens, tags):
         if new_tags[id] == 'O' and key == None:
             value = ''
 
-        elif new_tags[id][0] == 'B' or new_tags[id][0] == 'U':
+        elif (new_tags[id][0] == 'B' or new_tags[id][0] == 'U'):
+            if key != None:
+                info.append({
+                'content' : value,
+                'tag' : key,
+                })
             value = word_list[id]
             key = new_tags[id].split('-')[1]
 
@@ -106,8 +111,16 @@ def extract_info_cons(tokens, tags):
             })
             value = ''
             key = None
-        elif key != None:
-            value = value + ' ' + word_list[id]
+        elif new_tags[id][0] == 'I' and key != None:
+            if new_tags[id].split('-')[1] == key:
+                value = value + ' ' + word_list[id]
+            else:
+                info.append({
+                'content' : value,
+                'tag' : key,
+                })
+                value = ''
+                key = None
          
     return info
 
