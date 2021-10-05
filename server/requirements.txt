@@ -1,0 +1,11 @@
+torch
+pandas
+tqdm
+transformers
+tensorflow
+sklearn
+seqeval
+pymupdf
+sense2vec==1.0.3
+fastapi
+uvicorn
