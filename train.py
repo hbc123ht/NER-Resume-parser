@@ -101,7 +101,7 @@ if __name__ == '__main__':
     # Set epoch and grad max num
     epochs = 2
     max_grad_norm = 1.0
-
+    torch.backends.cudnn.enabled = False
     # training model
     logging.info("***** Running training *****")
     logging.info("  Num examples = %d"%(len(training_set)))

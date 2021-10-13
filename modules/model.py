@@ -24,6 +24,6 @@ class BERTClass(torch.nn.Module):
 
         if labels is not None:
             loss = self.crf(emissions = logits, tags=labels, mask=attention_mask)
-            outputs = loss, outputs
+            outputs = -1 * loss, outputs
         return outputs
 
