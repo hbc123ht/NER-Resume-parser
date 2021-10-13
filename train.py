@@ -7,15 +7,12 @@ import argparse
 import logging
 import json
 from utils import evaluate
-from seqeval.metrics import f1_score
-from seqeval.metrics import classification_report,accuracy_score,f1_score
 
-from transformers import BertForTokenClassification, \
-                        PhobertTokenizer, AdamW
+from transformers import BertConfig, PhobertTokenizer, AdamW
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from dataset import CustomDataset
-from model import BERTClass
+from modules.model import BERTClass
 
 from preprocess import get_entities, clean_entities, tokenize_data, get_train_data, split_sentences
 
@@ -73,8 +70,10 @@ if __name__ == '__main__':
 
     idx2tag = {'LABEL_{}'.format(tag2idx[key]) : key for key in tag2idx.keys()}
 
+    # initiate config
+    config = BertConfig.from_pretrained(args.PRETRAINED_MODEL, num_labels = len(tag2idx))
     # initial model
-    model = BERTClass(args.PRETRAINED_MODEL, num_labels = len(tag2idx))
+    model = BERTClass(config)
 
     #load checkpoint if available
     if args.CHECKPOINT_DIR != None:
@@ -121,8 +120,7 @@ if __name__ == '__main__':
             b_labels = batch['tag'].to(device)
             
             # forward pass
-            outputs = model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
-            loss, scores = outputs[:2]
+            loss, output = model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
             
             # backward pass
             loss.backward()
