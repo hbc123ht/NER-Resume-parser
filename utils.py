@@ -89,7 +89,7 @@ def extract_info_cons(tokens, tags):
     info = []
     value = ''
     key = None
-
+    
     # extract info
     for id in range(len(word_list)):
         if new_tags[id] == 'O' and key == None:
@@ -111,7 +111,7 @@ def extract_info_cons(tokens, tags):
             })
             value = ''
             key = None
-        elif new_tags[id][0] == 'I' and key != None:
+        elif key != None:
             if new_tags[id].split('-')[1] == key:
                 value = value + ' ' + word_list[id]
             else:
@@ -199,8 +199,7 @@ def make_prediction(
         with torch.no_grad():
             logit = model(tokens_tensor, 
                         attention_mask=segments_tensors)
-
-            logit_new = logit[0].argmax(2).detach().cpu().numpy().tolist()
+            logit_new = logit.argmax(2).detach().cpu().numpy().tolist()
             output = logit_new[0]
             output = [idx2tag[id] for id in output]
             tokens = tokenizer.convert_ids_to_tokens(indexed_tokens)
