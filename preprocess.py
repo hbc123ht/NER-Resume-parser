@@ -104,7 +104,6 @@ def get_train_data(contents, entities):
     for content, label in zip(contents, entities):
         text = []
         content = nlp(content)
-        
         # get tokens
         for token in content:
             text.append(token.text)
@@ -114,6 +113,22 @@ def get_train_data(contents, entities):
         labels.append(biluo_tags_from_offsets(content, label))
 
     return texts, labels
+
+def biluo_to_bio_tags(labels):
+    new_labels = []
+
+    for tags in labels:
+        new_tags = []
+        for tag in tags:
+            if tag[0] == 'L':
+                tag = tag.replace('L', 'I', 1)
+            if tag[0] == 'U':
+                tag = tag.replace('U', 'B', 1)
+            new_tags.append(tag)
+
+        new_labels.append(new_tags)
+        
+    return new_labels
 
 def tokenize_data(contents, labels, tokenizer = None):
     tokenized_texts = []

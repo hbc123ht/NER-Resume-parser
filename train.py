@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 from dataset import CustomDataset
 from modules.model import BERTClass
 
-from preprocess import get_entities, clean_entities, tokenize_data, get_train_data, split_sentences
+from preprocess import get_entities, clean_entities, tokenize_data, get_train_data, split_sentences, biluo_to_bio_tags
 
 
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
@@ -42,7 +42,8 @@ if __name__ == '__main__':
     data['entities'] = get_entities(data['annotation'])
     data['entities'] = clean_entities(data['content'], data['entities'])
     texts, labels = get_train_data(data['content'], data['entities'])
-
+    labels = biluo_to_bio_tags(labels)
+    
     # initiate tokenizier
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     
