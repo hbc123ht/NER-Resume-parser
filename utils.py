@@ -111,7 +111,7 @@ def extract_info_cons(tokens, tags):
             })
             value = ''
             key = None
-        elif key != None:
+        elif (new_tags[id][0] == 'I' or new_tags[id][0] == 'L') and key != None:
             if new_tags[id].split('-')[1] == key:
                 value = value + ' ' + word_list[id]
             else:
