@@ -89,13 +89,13 @@ def extract_info_cons(tokens, tags):
     info = []
     value = ''
     key = None
-    
+
     # extract info
     for id in range(len(word_list)):
         if new_tags[id] == 'O' and key == None:
             value = ''
 
-        elif (new_tags[id][0] == 'B' or new_tags[id][0] == 'U'):
+        elif (new_tags[id][0] == 'B'):
             if key != None:
                 info.append({
                 'content' : value,
@@ -105,13 +105,15 @@ def extract_info_cons(tokens, tags):
             key = new_tags[id].split('-')[1]
 
         elif (id == len(word_list) - 1 or new_tags[id][0] == 'O') and key != None:
+            if (id == len(word_list) - 1 ):
+                value = value + ' ' + word_list[id]
             info.append({
                 'content' : value,
                 'tag' : key,
             })
             value = ''
             key = None
-        elif (new_tags[id][0] == 'I' or new_tags[id][0] == 'L') and key != None:
+        elif (new_tags[id][0] == 'I') and key != None:
             if new_tags[id].split('-')[1] == key:
                 value = value + ' ' + word_list[id]
             else:
@@ -179,6 +181,7 @@ def evaluate(model, device, testing_loader, idx2tag):
 def make_prediction(
     input : str,
     idx2tag : list,
+    max_len,
     model,
     tokenizer,
     ):
@@ -186,7 +189,7 @@ def make_prediction(
     tokens  = tokenizer.tokenize(input)
     indexed_tokens = tokenizer.convert_tokens_to_ids(tokens)
 
-    splitted_tokens = split_token(indexed_tokens, length=258, overlap_size=20)
+    splitted_tokens = split_token(indexed_tokens, length=max_len, overlap_size=20)
 
     prediction = []
     for indexed_tokens in splitted_tokens:
