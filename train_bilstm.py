@@ -93,8 +93,8 @@ if __name__ == '__main__':
 
     # init dataset
     
-    training_set = CustomDataset(train_tokenized_texts, train_word_piece_labels, tokenizer = tokenizer, tag2idx = tag2idx)
-    test_set = CustomDataset(test_tokenized_texts, test_word_piece_labels, tokenizer = tokenizer, tag2idx = tag2idx)
+    training_set = CustomDataset(train_tokenized_texts, train_word_piece_labels, tokenizer = tokenizer, max_len= args.MAX_LEN, tag2idx = tag2idx)
+    test_set = CustomDataset(test_tokenized_texts, test_word_piece_labels, tokenizer = tokenizer, max_len= args.MAX_LEN, tag2idx = tag2idx)
 
     # Only set token embedding, attention embedding, no segment embedding
     train_params = {'batch_size': args.BATCH_NUM,
