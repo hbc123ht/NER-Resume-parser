@@ -12,9 +12,10 @@ from transformers import BertConfig, PhobertTokenizer, AdamW
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from dataset import CustomDataset
-from modules.model import BERTClass
+from modules.BiLSTM_CRF import LSTMClass
 
-from preprocess import get_entities, clean_entities, tokenize_data, get_train_data, split_sentences, biluo_to_bio_tags
+from preprocess import get_entities, clean_entities, tokenize_data, \
+                        get_train_data, split_sentences, biluo_to_bio_tags, add_sep_cls
 
 
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
@@ -43,21 +44,18 @@ if __name__ == '__main__':
     data['entities'] = clean_entities(data['content'], data['entities'])
     texts, labels = get_train_data(data['content'], data['entities'])
     labels = biluo_to_bio_tags(labels)
-    
     # initiate tokenizier
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     
     tokenizer = PhobertTokenizer.from_pretrained("vinai/phobert-base", do_lower_case =False)
+    tokenized_texts, word_piece_labels = texts, labels
+    word_piece_labels = add_sep_cls(word_piece_labels)
     
     # tokenize data
-    tokenized_texts, word_piece_labels = tokenize_data(texts, labels, tokenizer = tokenizer)
-
-    tokenized_texts, word_piece_labels = split_sentences(tokenized_texts, length=args.MAX_LEN, overlap_size=args.OS), \
-                    split_sentences(word_piece_labels, length=args.MAX_LEN, overlap_size=args.OS)
 
     train_tokenized_texts, test_tokenized_texts, \
     train_word_piece_labels, test_word_piece_labels = train_test_split(tokenized_texts, word_piece_labels, test_size=0.2, random_state=42)
-
+    
     #create or load tags list
 
     tag2idx = None
@@ -72,9 +70,14 @@ if __name__ == '__main__':
     idx2tag = {'LABEL_{}'.format(tag2idx[key]) : key for key in tag2idx.keys()}
 
     # initiate config
-    config = BertConfig.from_pretrained(args.PRETRAINED_MODEL, num_labels = len(tag2idx))
+    config = {
+        'vocab_size' : 100000,
+        'hidden_size' : 768,
+        'hidden_dropout_prob' : 0.1,
+        'num_labels' : len(idx2tag)
+    }
     # initial model
-    model = BERTClass(config)
+    model = LSTMClass(**config)
 
     #load checkpoint if available
     if args.CHECKPOINT_DIR != None:
@@ -85,8 +88,8 @@ if __name__ == '__main__':
 
     # init dataset
     
-    training_set = CustomDataset(train_tokenized_texts, train_word_piece_labels, tokenizer = tokenizer, max_len= args.MAX_LEN, tag2idx = tag2idx)
-    test_set = CustomDataset(test_tokenized_texts, test_word_piece_labels, tokenizer = tokenizer, max_len= args.MAX_LEN, tag2idx = tag2idx)
+    training_set = CustomDataset(train_tokenized_texts, train_word_piece_labels, tokenizer = tokenizer, tag2idx = tag2idx)
+    test_set = CustomDataset(test_tokenized_texts, test_word_piece_labels, tokenizer = tokenizer, tag2idx = tag2idx)
 
     # Only set token embedding, attention embedding, no segment embedding
     train_params = {'batch_size': args.BATCH_NUM,
@@ -117,11 +120,10 @@ if __name__ == '__main__':
         for step, batch in enumerate(train_dataloader):
             # add batch to gpu
             b_input_ids = batch['ids'].to(device)
-            b_input_mask = batch['mask'].to(device)
             b_labels = batch['tag'].to(device)
-            
+
             # forward pass
-            loss, output = model(b_input_ids, attention_mask=b_input_mask, labels=b_labels)
+            loss, output = model(b_input_ids, labels=b_labels)
             
             # backward pass
             loss.backward()

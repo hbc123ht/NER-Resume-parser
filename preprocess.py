@@ -3,6 +3,8 @@ import spacy
 from spacy.gold import biluo_tags_from_offsets
 import re
 
+import torch
+
 def split_sentences(sentences, length = None, overlap_size = None):
     """
     params sentence: list of sentences which is needed to be splitted
@@ -159,3 +161,15 @@ def tokenize_data(contents, labels, tokenizer = None):
         word_piece_labels.append(temp_lable)
     
     return tokenized_texts, word_piece_labels
+
+def add_sep_cls(labels):
+    word_piece_labels = []
+    
+    for label in labels:
+        temp_label = label
+        temp_label.insert(0, '[CLS]')
+        temp_label.append('[SEP]')
+        
+        word_piece_labels.append(temp_label)
+    
+    return word_piece_labels
