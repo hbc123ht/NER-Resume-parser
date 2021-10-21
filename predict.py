@@ -4,7 +4,7 @@ import argparse
 import torch
 from transformers import PhobertTokenizer, BertConfig
 import pandas as pd
-from modules.model import BERTClass
+from modules.BiLSTM_CRF import LSTMClass
 
 from utils import pdf2text, make_prediction
 
@@ -21,10 +21,18 @@ if __name__ == '__main__':
         idx2tag = {tag2idx[key] : key for key in tag2idx.keys()}
 
     # initate model
-    tokenizer = PhobertTokenizer.from_pretrained("vinai/phobert-base", do_lower_case =False)   # initiate config
-    config = BertConfig.from_pretrained("vinai/phobert-base", num_labels = len(tag2idx))
+    tokenizer = PhobertTokenizer.from_pretrained("vinai/phobert-base", do_lower_case =False)   
+
+    # initiate config
+    config = {
+        'vocab_size' : 100000,
+        'hidden_size' : 768,
+        'hidden_dropout_prob' : 0.1,
+        'num_labels' : len(idx2tag)
+    }
     # initial model
-    model = BERTClass(config)
+    model = LSTMClass(**config)
+
     model.load_state_dict(torch.load(os.path.join(args.LOAD_CHECKPOINT_DIR, 'weights.pt'),  map_location=torch.device('cpu')))
 
     # read data
@@ -34,6 +42,6 @@ if __name__ == '__main__':
     for _ in range(19):
         example = data['content'][_]
         print(example)
-        print(make_prediction(example, idx2tag, model = model, tokenizer = tokenizer))
+        print(make_prediction(example, idx2tag, model = model, max_len = 90, tokenizer = tokenizer))
         print("------------------------------------------------------------------------------------------------")
 

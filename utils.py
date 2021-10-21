@@ -178,26 +178,23 @@ def evaluate(model, device, testing_loader, idx2tag):
 def make_prediction(
     input : str,
     idx2tag : list,
+    max_len,
     model,
     tokenizer,
     ):
 
-    tokens  = tokenizer.tokenize(input)
-    indexed_tokens = tokenizer.convert_tokens_to_ids(tokens)
+    tokens  = tokenizer.encode(input, add_special_tokens=False)
 
-    splitted_tokens = split_token(indexed_tokens, length=258, overlap_size=20)
+    splitted_tokens = split_token(tokens, length=max_len, overlap_size=20)
 
     prediction = []
     for indexed_tokens in splitted_tokens:
-        segments_ids = [0] * len(indexed_tokens)
 
         tokens_tensor = torch.tensor([indexed_tokens]).to('cpu')
-        segments_tensors = torch.tensor([segments_ids]).to('cpu')
         
         model.eval()
         with torch.no_grad():
-            logit = model(tokens_tensor, 
-                        attention_mask=segments_tensors)
+            logit = model(tokens_tensor)
             logit_new = logit.argmax(2).detach().cpu().numpy().tolist()
             output = logit_new[0]
             output = [idx2tag[id] for id in output]
