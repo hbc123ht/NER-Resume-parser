@@ -50,7 +50,12 @@ if __name__ == '__main__':
     tokenizer = PhobertTokenizer.from_pretrained("vinai/phobert-base", do_lower_case =False)
     tokenized_texts, word_piece_labels = texts, labels
     word_piece_labels = add_sep_cls(word_piece_labels)
-    
+    tokenized_texts = add_sep_cls(tokenized_texts)
+
+    # split each sentence into pieces
+    tokenized_texts, word_piece_labels = split_sentences(tokenized_texts, length=args.MAX_LEN, overlap_size=args.OS), \
+                    split_sentences(word_piece_labels, length=args.MAX_LEN, overlap_size=args.OS)
+
     # tokenize data
 
     train_tokenized_texts, test_tokenized_texts, \

@@ -150,10 +150,9 @@ def evaluate(model, device, testing_loader, idx2tag):
     with torch.no_grad():
         for _, data in enumerate(testing_loader, 0):
             ids = data['ids'].to(device, dtype = torch.long)
-            mask = data['mask'].to(device, dtype = torch.long)
             targets = data['tag'].to(device, dtype = torch.long)
 
-            output = model(ids, attention_mask=mask, labels=targets)
+            output = model(ids, labels=targets)
 
             loss, logits = output[:2]
             logits = logits.detach().cpu().numpy()

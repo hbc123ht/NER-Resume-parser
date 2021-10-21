@@ -17,7 +17,7 @@ class CustomDataset(Dataset):
 
     def __getitem__(self, index):
         token = self.tokens[index]
-        ids = self.tokenizer.encode(token)
+        ids = self.tokenizer.encode(token, add_special_tokens=False)
         tag = self.tags[index]
         tag = [self.tag2idx.get(l) for l in tag]
         return {
