@@ -7,7 +7,7 @@ class BERTClass(torch.nn.Module):
         super(BERTClass, self).__init__()
         self.bert = BertModel(config)
         self.hidden_size = config.hidden_size
-        self.lstm = torch.nn.LSTM(self.hidden_size, config.hidden_size, batch_first=True, num_layers=1)
+        self.lstm = torch.nn.LSTM(self.hidden_size, config.hidden_size//2, bidirectional=True, batch_first=True, num_layers=1)
         self.dropout = torch.nn.Dropout(config.hidden_dropout_prob)
         self.classifier = torch.nn.Linear(config.hidden_size, config.num_labels)
         self.crf = CRF(num_tags = config.num_labels, batch_first = True)
