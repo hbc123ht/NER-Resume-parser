@@ -12,7 +12,7 @@ if __name__ == '__main__':
     #initiate argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--load_checkpoint_dir", dest="LOAD_CHECKPOINT_DIR", type=str, required=True, help="Path to checkpoint")
-    parser.add_argument("--MAX_LEN", dest="MAX_LEN", type=int, default = 90, help="This should be strictly greater than overlap size")
+    parser.add_argument("--MAX_LEN", dest="MAX_LEN", type=int, default = 60, help="This should be strictly greater than overlap size")
     parser.add_argument("--OS", dest="OS", type=int, default = 10, help="Overlap size between two segments")
     args = parser.parse_args()
 
