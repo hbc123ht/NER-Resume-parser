@@ -182,6 +182,7 @@ def make_prediction(
     input : str,
     idx2tag : list,
     max_len,
+    overlap_size,
     model,
     tokenizer,
     ):
@@ -189,7 +190,7 @@ def make_prediction(
     tokens  = tokenizer.tokenize(input)
     indexed_tokens = tokenizer.convert_tokens_to_ids(tokens)
 
-    splitted_tokens = split_token(indexed_tokens, length=max_len, overlap_size=20)
+    splitted_tokens = split_token(indexed_tokens, length=max_len, overlap_size=overlap_size)
 
     prediction = []
     for indexed_tokens in splitted_tokens:

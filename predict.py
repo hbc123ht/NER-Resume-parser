@@ -12,7 +12,8 @@ if __name__ == '__main__':
     #initiate argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--load_checkpoint_dir", dest="LOAD_CHECKPOINT_DIR", type=str, required=True, help="Path to checkpoint")
-    parser.add_argument("--MAX_LEN", dest="MAX_LEN", type=int, default = 90, help="This should be strictly greater than 20")
+    parser.add_argument("--MAX_LEN", dest="MAX_LEN", type=int, default = 90, help="This should be strictly greater than overlap size")
+    parser.add_argument("--OS", dest="OS", type=int, default = 10, help="Overlap size between two segments")
     args = parser.parse_args()
 
     # load tag2idx
@@ -31,5 +32,4 @@ if __name__ == '__main__':
     # read data
     example = "Nguyễn Văn A Ngày sinh: 01/01/1990 Mail: abc@gmail.com 123 Hoàn Kiếm, Hà Nội  Trường Đại học Bách khoa Hà Nội"
     print(example)
-    print(make_prediction(example, idx2tag, max_len = args.MAX_LEN, model = model, tokenizer = tokenizer))
-
+    print(make_prediction(example, idx2tag, max_len = args.MAX_LEN, overlap_size = args.OS, model = model, tokenizer = tokenizer))
